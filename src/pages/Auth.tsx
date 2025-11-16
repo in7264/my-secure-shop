@@ -5,15 +5,16 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
 
-  const API = import.meta.env.API as string;
+  const API = import.meta.env.VITE_API as string;
 
   // === Email login ===
   const handleEmailLogin = async () => {
+    console.log("API:", API);
     const res = await fetch(`${API}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: "include"
+      credentials: "include",
     });
 
     const data = await res.json();
@@ -92,11 +93,15 @@ export default function Auth() {
           <button onClick={handleEmailLogin}>Увійти</button>
           <p>
             Немає акаунта?{" "}
-            <a href="#" onClick={() => setMode("register")}>Зареєструватися</a>
+            <a href="#" onClick={() => setMode("register")}>
+              Зареєструватися
+            </a>
           </p>
           <p>
             Забули пароль?{" "}
-            <a href="#" onClick={() => setMode("reset")}>Відновити</a>
+            <a href="#" onClick={() => setMode("reset")}>
+              Відновити
+            </a>
           </p>
         </>
       )}
@@ -106,7 +111,9 @@ export default function Auth() {
           <button onClick={handleEmailRegister}>Зареєструватися</button>
           <p>
             Уже маєте акаунт?{" "}
-            <a href="#" onClick={() => setMode("login")}>Увійти</a>
+            <a href="#" onClick={() => setMode("login")}>
+              Увійти
+            </a>
           </p>
         </>
       )}
@@ -115,7 +122,9 @@ export default function Auth() {
         <>
           <button onClick={handlePasswordReset}>Відновити пароль</button>
           <p>
-            <a href="#" onClick={() => setMode("login")}>Назад до входу</a>
+            <a href="#" onClick={() => setMode("login")}>
+              Назад до входу
+            </a>
           </p>
         </>
       )}

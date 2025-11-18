@@ -9,20 +9,33 @@ export default function Auth() {
 
   // === Email login ===
   const handleEmailLogin = async () => {
-    console.log("API:", API);
-    const res = await fetch(`${API}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      credentials: "include",
-    });
+    try {
+      console.log("API:", API);
 
-    const data = await res.json();
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: "include", // Уберите это если не используете куки
+      });
 
-    if (!res.ok) return alert("Помилка входу: " + data.error);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+      }
 
-    alert("Успішний вхід!");
-    window.location.href = "/admin"; // redirect
+      const data = await res.json();
+      console.log("Login success:", data);
+
+      alert("Успішний вхід!");
+      window.location.href = "/admin";
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Помилка входу: " + error.message);
+    }
   };
 
   // === Email registration ===

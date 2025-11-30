@@ -19,7 +19,7 @@ export default function Auth() {
           Accept: "application/json",
         },
         body: JSON.stringify({ email, password }),
-        credentials: "include", // Уберите это если не используете куки
+        credentials: "include",
       });
 
       if (!res.ok) {

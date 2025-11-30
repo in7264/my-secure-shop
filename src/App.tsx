@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "./lib/supabase";
 import {
   BrowserRouter as Router,
   Routes,
@@ -12,6 +11,8 @@ import Auth from "./pages/Auth";
 import EquipmentList from "./pages/EquipmentList";
 import AdminPanel from "./pages/AdminPanel";
 import "./styles/App.scss";
+import Categories from "./pages/Categories";
+import EquipmentDetail from "./pages/EquipmentDetail";
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -25,54 +26,79 @@ export default function App() {
 
 function MainApp({ user, setUser }: { user: any; setUser: any }) {
   const navigate = useNavigate();
+  const API = import.meta.env.VITE_API as string;
 
+  // Проверить авторизацию при загрузке
   useEffect(() => {
-    // Отримати поточного користувача
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      checkRoleAndRedirect(session?.user);
-    });
+    checkAuth();
 
-    // Слухати зміни авторизації
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const newUser = session?.user ?? null;
-        setUser(newUser);
-        checkRoleAndRedirect(newUser);
-      }
-    );
+    // Проверять авторизацию каждые 5 минут
+    const interval = setInterval(checkAuth, 300000);
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => clearInterval(interval);
   }, []);
 
+  // Проверить авторизацию через бэкенд
+  const checkAuth = async () => {
+    try {
+      const res = await fetch(`${API}/auth/check`, {
+        method: "GET",
+        credentials: "include", // Важно для кук
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authorized) {
+          setUser(data.user);
+          checkRoleAndRedirect(data.user);
+        } else {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      setUser(null);
+    }
+  };
+
+  // Проверить роль и перенаправить
   const checkRoleAndRedirect = async (user: any) => {
-    if (!user) return;
-
-    // Отримати роль користувача з бази
-    const { data, error } = await supabase
-      .from("auth.users") // або auth.users, якщо поле role є саме там
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (error) {
-      console.error("Помилка отримання ролі:", error);
+    if (!user) {
+      navigate("/");
       return;
     }
 
-    if (data?.role === "admin") {
+    // Если пользователь уже на нужной странице, не перенаправлять
+    const currentPath = window.location.pathname;
+
+    if (user.role === "admin" && currentPath !== "/admin") {
       navigate("/admin");
-    } else {
+    } else if (user.role !== "admin" && currentPath === "/admin") {
       navigate("/");
     }
   };
 
+  // Выйти из системы
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    navigate("/");
+    try {
+      const res = await fetch(`${API}/auth/logout`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setUser(null);
+        navigate("/");
+        window.location.reload(); // Полностью очистить состояние
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Все равно сбросить состояние
+      setUser(null);
+      navigate("/");
+    }
   };
 
   return (
@@ -86,20 +112,45 @@ function MainApp({ user, setUser }: { user: any; setUser: any }) {
         <div className="user-info">
           {user ? (
             <>
-              <span>👤 {user.email}</span>
+              <span>
+                👤 {user.email} ({user.role})
+              </span>
               <button onClick={handleLogout}>Вийти</button>
+              {user.role === "supabase_admin" && (
+                <Link to="/admin" style={{ marginLeft: "10px" }}>
+                  Адмін-панель
+                </Link>
+              )}
             </>
           ) : (
             <Link to="/auth">Увійти</Link>
           )}
         </div>
       </nav>
-
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/equipment" element={<EquipmentList />} />
-        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/equipment" element={<Categories />} />
+        <Route
+          path="/equipment/category/:category"
+          element={<EquipmentList />}
+        />
+        <Route path="/equipment/all" element={<EquipmentList />} />
+        <Route path="/equipment/item/:id" element={<EquipmentDetail />} />
+        <Route
+          path="/admin"
+          element={
+            user?.role === "supabase_admin" ? (
+              <AdminPanel />
+            ) : (
+              <div style={{ padding: "20px", textAlign: "center" }}>
+                <h2>Доступ заборонено</h2>
+                <p>У вас немає прав для доступу до адмін-панелі</p>
+                <Link to="/">На головну</Link>
+              </div>
+            )
+          }
+        />
       </Routes>
     </>
   );

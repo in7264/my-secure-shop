@@ -1,10 +1,15 @@
 export interface Equipment {
-  id: string;
+  id: number;
   name: string;
-  description?: string | null;
-  price: string;
+  description: string;
+  price: number;
   stock: number;
-  category?: string | null;
+  category: string;
   created_at: string;
-  owner?: string | null;
+  total_views: number;
+  images?: string[];
+}
+
+export interface Category {
+  name: string;
 }

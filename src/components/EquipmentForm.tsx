@@ -14,7 +14,7 @@ export default function EquipmentForm({ onAdded }: { onAdded?: () => void }) {
       ? (await supabase.auth.getUser()).data.user
       : null;
 
-    const { data, error } = await supabase.from("equipment").insert({
+    const { error } = await supabase.from("equipment").insert({
       name,
       price,
       stock,

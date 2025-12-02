@@ -31,10 +31,12 @@ export default function Auth() {
       console.log("Login success:", data);
 
       alert("Успішний вхід!");
-      window.location.href = "/admin";
+      window.location.href = "/";
     } catch (error) {
       console.error("Login error:", error);
-      alert("Помилка входу: " + error.message);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      alert("Помилка входу: " + errorMessage);
     }
   };
 

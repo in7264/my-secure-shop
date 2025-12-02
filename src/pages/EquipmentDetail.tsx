@@ -1,28 +1,54 @@
-import React, { useEffect, useState } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import type { Equipment } from "../types/equipment";
+import type { Equipment, EquipmentDetailProps } from "../types/index";
 
-export default function EquipmentDetail() {
+export default function EquipmentDetail({
+  onAddToCart,
+  onRemoveFromCart,
+  onUpdateCartQuantity,
+  cartItems,
+  favorites,
+  onTrackView,
+}: EquipmentDetailProps) {
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [cartQuantity, setCartQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [addingToFavorites, setAddingToFavorites] = useState(false);
+
+  // Используем useRef вместо useState для hasTrackedView
+  const hasTrackedViewRef = useRef(false);
+  const initialLoadRef = useRef(false);
 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API as string;
 
-  useEffect(() => {
-    if (id) {
-      loadEquipment();
-      trackView(); // Отслеживаем просмотр
-    }
-  }, [id]);
+  // Определяем, есть ли товар в корзине и избранном
+  const isInCart = equipment
+    ? cartItems.some((item) => item.equipment.id === equipment.id)
+    : false;
 
-  async function loadEquipment() {
+  const isInFavorites = equipment
+    ? favorites.some((fav) => fav.equipment.id === equipment.id)
+    : false;
+
+  // Находим текущее количество в корзине
+  const currentCartItem = equipment
+    ? cartItems.find((item) => item.equipment.id === equipment.id)
+    : null;
+
+  // Загрузка оборудования - используем useCallback
+  const loadEquipment = useCallback(async () => {
+    if (!id || initialLoadRef.current) return;
+
     try {
       setLoading(true);
       setError(null);
+      initialLoadRef.current = true;
 
       const res = await fetch(`${API}/equipment/${id}`);
 
@@ -32,22 +58,131 @@ export default function EquipmentDetail() {
 
       const data = await res.json();
       setEquipment(data.equipment);
+
+      // Отслеживание просмотра только после успешной загрузки
+      if (!hasTrackedViewRef.current) {
+        trackView();
+      }
     } catch (err) {
       console.error("Error loading equipment:", err);
       setError("Не вдалося завантажити інформацію про обладнання");
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, API]);
 
-  async function trackView() {
+  // Отслеживание просмотра
+  const trackView = useCallback(async () => {
+    if (!id || hasTrackedViewRef.current) return;
+
     try {
       await fetch(`${API}/equipment/${id}/view`, {
         method: "POST",
         credentials: "include",
       });
+      hasTrackedViewRef.current = true;
     } catch (error) {
       console.error("Error tracking view:", error);
+    }
+  }, [id, API]);
+
+  // Основной эффект загрузки
+  useEffect(() => {
+    if (id && !initialLoadRef.current) {
+      loadEquipment();
+    }
+
+    // Очистка при размонтировании компонента
+    return () => {
+      initialLoadRef.current = false;
+    };
+  }, [id, loadEquipment]);
+
+  // Обновление количества в корзине
+  useEffect(() => {
+    if (currentCartItem) {
+      setCartQuantity(currentCartItem.quantity);
+    } else {
+      setCartQuantity(1);
+    }
+  }, [currentCartItem]);
+
+  useEffect(() => {
+    if (id && equipment && !hasTrackedViewRef.current) {
+      onTrackView(parseInt(id));
+      hasTrackedViewRef.current = true;
+    }
+  }, [id, equipment, onTrackView]);
+
+  // Остальные функции без изменений...
+  async function addToCartHandler() {
+    if (!equipment) return;
+
+    setAddingToCart(true);
+    try {
+      onAddToCart(equipment, cartQuantity);
+      alert("Товар додано до кошика!");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Помилка при додаванні до кошика");
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  async function removeFromCartHandler() {
+    if (!equipment) return;
+
+    onRemoveFromCart(equipment.id);
+    alert("Товар видалено з кошика!");
+    setCartQuantity(1);
+  }
+
+  async function updateCartQuantityHandler(newQuantity: number) {
+    if (!equipment || newQuantity < 1) return;
+
+    onUpdateCartQuantity(equipment.id, newQuantity);
+    setCartQuantity(newQuantity);
+  }
+
+  async function toggleFavoriteHandler() {
+    if (!equipment) return;
+
+    setAddingToFavorites(true);
+    try {
+      if (isInFavorites) {
+        // Удаляем из избранного
+        const res = await fetch(`${API}/user/favorites/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          alert("Видалено з обраного");
+          window.dispatchEvent(new Event("favoritesUpdated"));
+        }
+      } else {
+        // Добавляем в избранное
+        const res = await fetch(`${API}/user/favorites/${id}`, {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          alert("Додано до обраного!");
+          window.dispatchEvent(new Event("favoritesUpdated"));
+        } else if (res.status === 401) {
+          alert(
+            "Будь ласка, увійдіть в систему щоб додавати товари до обраного"
+          );
+          navigate("/auth");
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      alert("Помилка при роботі з обраним");
+    } finally {
+      setAddingToFavorites(false);
     }
   }
 
@@ -70,7 +205,8 @@ export default function EquipmentDetail() {
 
   const images = equipment.images || [];
   const mainImage =
-    equipment.main_image || (images.length > 0 ? images[0] : null);
+    equipment.main_image ||
+    (Array.isArray(images) && images.length > 0 ? images[0] : null);
 
   return (
     <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
@@ -252,36 +388,189 @@ export default function EquipmentDetail() {
             </div>
           </div>
 
+          {/* Блок управления корзиной и избранным */}
+          <div style={{ marginBottom: "20px" }}>
+            {isInCart ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "10px",
+                }}
+              >
+                <span style={{ fontWeight: "bold", color: "#28a745" }}>
+                  ✓ В кошику
+                </span>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
+                >
+                  <button
+                    onClick={() => updateCartQuantityHandler(cartQuantity - 1)}
+                    disabled={cartQuantity <= 1}
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      border: "1px solid #ddd",
+                      backgroundColor: "white",
+                      borderRadius: "4px",
+                      cursor: cartQuantity > 1 ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    -
+                  </button>
+                  <span style={{ padding: "0 10px", fontWeight: "bold" }}>
+                    {cartQuantity}
+                  </span>
+                  <button
+                    onClick={() => updateCartQuantityHandler(cartQuantity + 1)}
+                    disabled={cartQuantity >= equipment.stock}
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      border: "1px solid #ddd",
+                      backgroundColor: "white",
+                      borderRadius: "4px",
+                      cursor:
+                        cartQuantity < equipment.stock
+                          ? "pointer"
+                          : "not-allowed",
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+                <button
+                  onClick={removeFromCartHandler}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  Видалити
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "10px",
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
+                >
+                  <span style={{ marginRight: "10px" }}>Кількість:</span>
+                  <button
+                    onClick={() =>
+                      setCartQuantity(Math.max(1, cartQuantity - 1))
+                    }
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      border: "1px solid #ddd",
+                      backgroundColor: "white",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    -
+                  </button>
+                  <span style={{ padding: "0 10px", fontWeight: "bold" }}>
+                    {cartQuantity}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCartQuantity(
+                        Math.min(equipment.stock, cartQuantity + 1)
+                      )
+                    }
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      border: "1px solid #ddd",
+                      backgroundColor: "white",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+                <button
+                  onClick={addToCartHandler}
+                  disabled={addingToCart || equipment.stock === 0}
+                  style={{
+                    padding: "12px 24px",
+                    backgroundColor:
+                      equipment.stock > 0 ? "#28a745" : "#6c757d",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor:
+                      equipment.stock > 0 && !addingToCart
+                        ? "pointer"
+                        : "not-allowed",
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {addingToCart
+                    ? "Додаємо..."
+                    : equipment.stock > 0
+                    ? "Додати до кошика"
+                    : "Немає в наявності"}
+                </button>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <button
+              onClick={toggleFavoriteHandler}
+              disabled={addingToFavorites}
               style={{
                 padding: "12px 24px",
-                backgroundColor: equipment.stock > 0 ? "#28a745" : "#6c757d",
+                backgroundColor: isInFavorites ? "#dc3545" : "transparent",
+                color: isInFavorites ? "white" : "#007bff",
+                border: `1px solid ${isInFavorites ? "#dc3545" : "#007bff"}`,
+                borderRadius: "6px",
+                cursor: addingToFavorites ? "not-allowed" : "pointer",
+                fontSize: "16px",
+                opacity: addingToFavorites ? 0.6 : 1,
+              }}
+            >
+              {addingToFavorites
+                ? "..."
+                : isInFavorites
+                ? "★ В обраному"
+                : "☆ Додати до обраного"}
+            </button>
+
+            <Link
+              to="/cart"
+              style={{
+                padding: "12px 24px",
+                backgroundColor: "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "6px",
-                cursor: equipment.stock > 0 ? "pointer" : "not-allowed",
-                fontSize: "16px",
-                fontWeight: "bold",
-              }}
-              disabled={equipment.stock === 0}
-            >
-              {equipment.stock > 0 ? "Замовити" : "Немає в наявності"}
-            </button>
-
-            <button
-              style={{
-                padding: "12px 24px",
-                backgroundColor: "transparent",
-                color: "#007bff",
-                border: "1px solid #007bff",
-                borderRadius: "6px",
                 cursor: "pointer",
                 fontSize: "16px",
+                textDecoration: "none",
+                display: "inline-block",
+                textAlign: "center",
               }}
             >
-              Додати до обраного
-            </button>
+              Перейти до кошика
+            </Link>
           </div>
         </div>
       </div>

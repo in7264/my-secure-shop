@@ -52,15 +52,6 @@ export interface CartPageProps {
   onRemoveFromCart: (equipmentId: number) => void;
 }
 
-export interface EquipmentDetailProps {
-  onAddToCart: (equipment: Equipment, quantity: number) => void;
-  onRemoveFromCart: (equipmentId: number) => void;
-  onUpdateCartQuantity: (equipmentId: number, quantity: number) => void;
-  cartItems: CartItem[];
-  favorites: Favorite[];
-  onTrackView: (equipmentId: number) => Promise<void>
-}
-
 export interface AnalyticsData {
   totalProducts: number;
   totalViews: number;

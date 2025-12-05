@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import type { Equipment } from "../types";
-import AddEditModal from "../components/AddEditModal";
-import DeleteModal from "../components/DeleteModal";
+import type { Equipment } from "../../types";
+import AddEditModal from "../AddEditModal";
+import DeleteModal from "../DeleteModal";
 
 const API = import.meta.env.VITE_API as string;
 console.log("API URL:", API); // Добавьте эту строку для отладки

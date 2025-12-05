@@ -1,17 +1,19 @@
 import { useState } from "react";
-import AdminOverview from "./AdminOverview";
-import AdminProducts from "./AdminProducts";
-import AdminAnalytics from "./AdminAnalytics";
-import type { AnalyticsData, Equipment } from "../types";
+import type { AnalyticsData, Equipment } from "../../types";
+import AdminAnalytics from "../../components/AdminsComponents/AdminAnalytics";
+import AdminOverview from "../../components/AdminsComponents/AdminOverview";
+import AdminProducts from "../../components/AdminsComponents/AdminProducts";
 
-export default function AdminPanel() {
+export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(
+    null
+  );
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -71,10 +73,7 @@ export default function AdminPanel() {
 
       {/* Контент вкладок */}
       {activeTab === "overview" && (
-        <AdminOverview
-          analytics={analytics}
-          setAnalytics={setAnalytics}
-        />
+        <AdminOverview analytics={analytics} setAnalytics={setAnalytics} />
       )}
 
       {activeTab === "products" && (
@@ -92,9 +91,7 @@ export default function AdminPanel() {
         />
       )}
 
-      {activeTab === "analytics" && (
-        <AdminAnalytics analytics={analytics} />
-      )}
+      {activeTab === "analytics" && <AdminAnalytics analytics={analytics} />}
     </div>
   );
 }

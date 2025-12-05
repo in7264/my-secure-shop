@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { CartPageProps } from "../types";
+import { useAppState } from "../../contexts/AppContext";
+import { useAppActions } from "../../hooks/useAppActions";
 
-export default function CartPage({
-  cartItems,
-  onUpdateCart,
-  onRemoveFromCart,
-}: CartPageProps) {
+export default function CartPage() {
+  const { cartItems } = useAppState();
+  const { updateCartQuantity, removeFromCart } = useAppActions();
   const [loading, setLoading] = useState(false);
 
   const calculateTotal = () => {
@@ -25,7 +24,7 @@ export default function CartPage({
       // Здесь будет логика оформления заказа
       alert("Заказ оформлен успешно!");
       // Очищаем корзину после успешного заказа
-      cartItems.forEach((item) => onRemoveFromCart(item.equipment.id));
+      cartItems.forEach((item) => removeFromCart(item.equipment.id));
     } catch (error) {
       console.error("Checkout error:", error);
       alert("Ошибка при оформлении заказа");
@@ -134,7 +133,10 @@ export default function CartPage({
                     >
                       <button
                         onClick={() =>
-                          onUpdateCart(item.equipment.id, item.quantity - 1)
+                          updateCartQuantity(
+                            item.equipment.id,
+                            item.quantity - 1
+                          )
                         }
                         disabled={item.quantity <= 1}
                         style={{
@@ -153,7 +155,10 @@ export default function CartPage({
                       </span>
                       <button
                         onClick={() =>
-                          onUpdateCart(item.equipment.id, item.quantity + 1)
+                          updateCartQuantity(
+                            item.equipment.id,
+                            item.quantity + 1
+                          )
                         }
                         disabled={item.quantity >= item.equipment.stock}
                         style={{
@@ -174,7 +179,7 @@ export default function CartPage({
                   </div>
 
                   <button
-                    onClick={() => onRemoveFromCart(item.equipment.id)}
+                    onClick={() => removeFromCart(item.equipment.id)}
                     style={{
                       padding: "0.5rem 1rem",
                       backgroundColor: "#dc3545",

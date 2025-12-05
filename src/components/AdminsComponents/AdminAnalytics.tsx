@@ -11,7 +11,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import type { AnalyticsData } from "../types";
+import type { AnalyticsData } from "../../types";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 

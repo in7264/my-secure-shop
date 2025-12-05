@@ -1,16 +1,19 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import type { Equipment, EquipmentDetailProps } from "../types/index";
+import { useAppState } from "../../contexts/AppContext";
+import type { Equipment } from "../../types/index";
+import { useAppActions } from "../../hooks/useAppActions";
 
-export default function EquipmentDetail({
-  onAddToCart,
-  onRemoveFromCart,
-  onUpdateCartQuantity,
-  cartItems,
-  favorites,
-  onTrackView,
-}: EquipmentDetailProps) {
+interface EquipmentDetailProps {
+  onTrackView: (equipmentId: number) => void;
+}
+
+export default function EquipmentDetail({ onTrackView }: EquipmentDetailProps) {
+  // Получаем состояние и действия из контекста
+  const { cartItems, favorites, user } = useAppState();
+  const { addToCart, removeFromCart, updateCartQuantity, toggleFavorite } = useAppActions();
+  
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +22,7 @@ export default function EquipmentDetail({
   const [addingToCart, setAddingToCart] = useState(false);
   const [addingToFavorites, setAddingToFavorites] = useState(false);
 
-  // Используем useRef вместо useState для hasTrackedView
+  // Используем useRef для предотвращения повторных вызовов
   const hasTrackedViewRef = useRef(false);
   const initialLoadRef = useRef(false);
 
@@ -41,7 +44,7 @@ export default function EquipmentDetail({
     ? cartItems.find((item) => item.equipment.id === equipment.id)
     : null;
 
-  // Загрузка оборудования - используем useCallback
+  // Загрузка оборудования
   const loadEquipment = useCallback(async () => {
     if (!id || initialLoadRef.current) return;
 
@@ -60,8 +63,9 @@ export default function EquipmentDetail({
       setEquipment(data.equipment);
 
       // Отслеживание просмотра только после успешной загрузки
-      if (!hasTrackedViewRef.current) {
-        trackView();
+      if (!hasTrackedViewRef.current && data.equipment) {
+        onTrackView(data.equipment.id);
+        hasTrackedViewRef.current = true;
       }
     } catch (err) {
       console.error("Error loading equipment:", err);
@@ -69,22 +73,7 @@ export default function EquipmentDetail({
     } finally {
       setLoading(false);
     }
-  }, [id, API]);
-
-  // Отслеживание просмотра
-  const trackView = useCallback(async () => {
-    if (!id || hasTrackedViewRef.current) return;
-
-    try {
-      await fetch(`${API}/equipment/${id}/view`, {
-        method: "POST",
-        credentials: "include",
-      });
-      hasTrackedViewRef.current = true;
-    } catch (error) {
-      console.error("Error tracking view:", error);
-    }
-  }, [id, API]);
+  }, [id, API, onTrackView]);
 
   // Основной эффект загрузки
   useEffect(() => {
@@ -98,7 +87,7 @@ export default function EquipmentDetail({
     };
   }, [id, loadEquipment]);
 
-  // Обновление количества в корзине
+  // Обновление количества в корзине при изменении currentCartItem
   useEffect(() => {
     if (currentCartItem) {
       setCartQuantity(currentCartItem.quantity);
@@ -107,20 +96,13 @@ export default function EquipmentDetail({
     }
   }, [currentCartItem]);
 
-  useEffect(() => {
-    if (id && equipment && !hasTrackedViewRef.current) {
-      onTrackView(parseInt(id));
-      hasTrackedViewRef.current = true;
-    }
-  }, [id, equipment, onTrackView]);
-
-  // Остальные функции без изменений...
-  async function addToCartHandler() {
+  // Функция для добавления в корзину
+  const addToCartHandler = useCallback(async () => {
     if (!equipment) return;
 
     setAddingToCart(true);
     try {
-      onAddToCart(equipment, cartQuantity);
+      await addToCart(equipment, cartQuantity);
       alert("Товар додано до кошика!");
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -128,55 +110,55 @@ export default function EquipmentDetail({
     } finally {
       setAddingToCart(false);
     }
-  }
+  }, [equipment, cartQuantity, addToCart]);
 
-  async function removeFromCartHandler() {
+  // Функция для удаления из корзины
+  const removeFromCartHandler = useCallback(async () => {
     if (!equipment) return;
 
-    onRemoveFromCart(equipment.id);
-    alert("Товар видалено з кошика!");
-    setCartQuantity(1);
-  }
+    try {
+      await removeFromCart(equipment.id);
+      alert("Товар видалено з кошика!");
+      setCartQuantity(1);
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+      alert("Помилка при видаленні з кошика");
+    }
+  }, [equipment, removeFromCart]);
 
-  async function updateCartQuantityHandler(newQuantity: number) {
+  // Функция для обновления количества в корзине
+  const updateCartQuantityHandler = useCallback(async (newQuantity: number) => {
     if (!equipment || newQuantity < 1) return;
 
-    onUpdateCartQuantity(equipment.id, newQuantity);
-    setCartQuantity(newQuantity);
-  }
+    try {
+      await updateCartQuantity(equipment.id, newQuantity);
+      setCartQuantity(newQuantity);
+    } catch (error) {
+      console.error("Error updating cart quantity:", error);
+      alert("Помилка при оновленні кількості");
+    }
+  }, [equipment, updateCartQuantity]);
 
-  async function toggleFavoriteHandler() {
+  // Функция для работы с избранным
+  const toggleFavoriteHandler = useCallback(async () => {
     if (!equipment) return;
 
     setAddingToFavorites(true);
     try {
+      if (!user) {
+        // Если пользователь не авторизован, перенаправляем на страницу авторизации
+        alert("Будь ласка, увійдіть в систему щоб додавати товари до обраного");
+        navigate("/auth");
+        return;
+      }
+
+      await toggleFavorite(equipment);
+      
+      // Сообщение пользователю
       if (isInFavorites) {
-        // Удаляем из избранного
-        const res = await fetch(`${API}/user/favorites/${id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          alert("Видалено з обраного");
-          window.dispatchEvent(new Event("favoritesUpdated"));
-        }
+        alert("Видалено з обраного");
       } else {
-        // Добавляем в избранное
-        const res = await fetch(`${API}/user/favorites/${id}`, {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          alert("Додано до обраного!");
-          window.dispatchEvent(new Event("favoritesUpdated"));
-        } else if (res.status === 401) {
-          alert(
-            "Будь ласка, увійдіть в систему щоб додавати товари до обраного"
-          );
-          navigate("/auth");
-        }
+        alert("Додано до обраного!");
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
@@ -184,7 +166,26 @@ export default function EquipmentDetail({
     } finally {
       setAddingToFavorites(false);
     }
-  }
+  }, [equipment, user, isInFavorites, toggleFavorite, navigate]);
+
+  // Функции для управления количеством
+  const decreaseQuantity = useCallback(() => {
+    if (isInCart) {
+      updateCartQuantityHandler(cartQuantity - 1);
+    } else {
+      setCartQuantity(prev => Math.max(1, prev - 1));
+    }
+  }, [isInCart, cartQuantity, updateCartQuantityHandler]);
+
+  const increaseQuantity = useCallback(() => {
+    if (!equipment) return;
+    
+    if (isInCart) {
+      updateCartQuantityHandler(cartQuantity + 1);
+    } else {
+      setCartQuantity(prev => Math.min(equipment.stock, prev + 1));
+    }
+  }, [isInCart, cartQuantity, equipment, updateCartQuantityHandler]);
 
   if (loading) {
     return (
@@ -406,7 +407,7 @@ export default function EquipmentDetail({
                   style={{ display: "flex", alignItems: "center", gap: "5px" }}
                 >
                   <button
-                    onClick={() => updateCartQuantityHandler(cartQuantity - 1)}
+                    onClick={decreaseQuantity}
                     disabled={cartQuantity <= 1}
                     style={{
                       width: "30px",
@@ -423,7 +424,7 @@ export default function EquipmentDetail({
                     {cartQuantity}
                   </span>
                   <button
-                    onClick={() => updateCartQuantityHandler(cartQuantity + 1)}
+                    onClick={increaseQuantity}
                     disabled={cartQuantity >= equipment.stock}
                     style={{
                       width: "30px",
@@ -469,9 +470,7 @@ export default function EquipmentDetail({
                 >
                   <span style={{ marginRight: "10px" }}>Кількість:</span>
                   <button
-                    onClick={() =>
-                      setCartQuantity(Math.max(1, cartQuantity - 1))
-                    }
+                    onClick={decreaseQuantity}
                     style={{
                       width: "30px",
                       height: "30px",
@@ -487,11 +486,7 @@ export default function EquipmentDetail({
                     {cartQuantity}
                   </span>
                   <button
-                    onClick={() =>
-                      setCartQuantity(
-                        Math.min(equipment.stock, cartQuantity + 1)
-                      )
-                    }
+                    onClick={increaseQuantity}
                     style={{
                       width: "30px",
                       height: "30px",

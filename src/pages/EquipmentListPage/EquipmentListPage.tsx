@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom"; // Добавьте useNavigate
-import type { Equipment } from "../types/index";
+import type { Equipment } from "../../types/index";
 
 export default function EquipmentList() {
   const [items, setItems] = useState<Equipment[]>([]);

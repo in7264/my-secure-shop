@@ -1,10 +1,13 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { Favorite } from "../types";
+import type { Favorite } from "../../types";
+import { useAppState } from "../../contexts/AppContext";
+import { useAppActions } from "../../hooks/useAppActions";
 
 export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const { favorites } = useAppState();
+  const { toggleFavorite } = useAppActions();
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API as string;
@@ -23,7 +26,7 @@ export default function FavoritesPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setFavorites(data.favorites || []);
+        toggleFavorite(data.favorites || []);
       }
     } catch (error) {
       console.error("Error loading favorites:", error);
@@ -40,7 +43,7 @@ export default function FavoritesPage() {
       });
 
       if (res.ok) {
-        setFavorites(
+        toggleFavorite(
           favorites.filter((fav) => fav.equipment.id !== equipmentId)
         );
         alert("Видалено з обраного");

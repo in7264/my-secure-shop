@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Auth() {
+export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");

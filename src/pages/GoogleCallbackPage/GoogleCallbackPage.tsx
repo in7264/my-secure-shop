@@ -17,10 +17,8 @@ export default function GoogleCallbackPage() {
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
 
-        // Извлекаем access_token от Google (не provider_token!)
+        // Извлекаем access_token от Google
         const googleAccessToken = params.get("access_token");
-        const expiresIn = params.get("expires_in");
-        const tokenType = params.get("token_type");
 
         console.log(
           "Google access token received:",
@@ -31,8 +29,7 @@ export default function GoogleCallbackPage() {
           throw new Error("No access token received from Google");
         }
 
-        // НЕ отправляем Google token напрямую в Supabase
-        // Вместо этого используем Google token для получения информации о пользователе
+        // Используем Google token для получения информации о пользователе
         console.log("Fetching user info from Google...");
 
         // Получаем информацию о пользователе от Google
@@ -52,7 +49,7 @@ export default function GoogleCallbackPage() {
         const userInfo = await userInfoResponse.json();
         console.log("Google user info:", userInfo);
 
-        // Теперь отправляем данные на ваш бэкенд
+        // Отправляем данные на бэкенд
         const response = await fetch(`${API}/auth/google/callback`, {
           method: "POST",
           headers: {
@@ -62,7 +59,7 @@ export default function GoogleCallbackPage() {
           credentials: "include",
           body: JSON.stringify({
             googleAccessToken,
-            userInfo, // Отправляем информацию о пользователе
+            userInfo,
           }),
         });
 
@@ -158,7 +155,7 @@ export default function GoogleCallbackPage() {
         <h2 style={{ color: "#e74c3c" }}>❌ Authentication Error</h2>
         <p style={{ margin: "20px 0", maxWidth: "500px" }}>{error}</p>
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => navigate("/auth")}
           style={{
             padding: "10px 20px",
             backgroundColor: "#3498db",

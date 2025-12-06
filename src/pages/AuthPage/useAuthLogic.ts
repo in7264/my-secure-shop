@@ -114,9 +114,25 @@ export function useAuthLogic() {
   };
 
   // Обробка входу через Google
+  // Обробка входу через Google (новый фронтенд способ)
   const handleGoogleLogin = (): void => {
     try {
       console.log("Starting Google OAuth on frontend...");
+
+      // Получаем Google Client ID из переменных окружения
+      const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+      if (!googleClientId) {
+        console.error("Google Client ID is not configured");
+        setError("Google authentication is not properly configured");
+        alert("Google authentication is not properly configured");
+        return;
+      }
+
+      console.log(
+        "Using Google Client ID:",
+        googleClientId.substring(0, 10) + "..."
+      );
 
       // Строим URL для Google OAuth
       const googleAuthUrl = new URL(
@@ -124,8 +140,8 @@ export function useAuthLogic() {
       );
 
       const params = {
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        redirect_uri: `${window.location.origin}/auth/callback`, // Редирект на наш фронтенд
+        client_id: googleClientId, // ДОБАВЬТЕ ЭТО
+        redirect_uri: `${window.location.origin}/auth/callback`,
         response_type: "token", // Используем token flow (Implicit flow)
         scope: "email profile openid",
         include_granted_scopes: "true",

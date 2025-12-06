@@ -77,7 +77,7 @@ function MainApp() {
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAppState();
 
-  if (user?.role === "supabase_admin") {
+  if (user?.role === "service_role" || user?.role === "supabase_admin") {
     return <>{children}</>;
   }
 

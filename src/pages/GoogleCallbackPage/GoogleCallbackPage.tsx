@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API as string;
 
@@ -7,69 +7,79 @@ export default function GoogleCallbackPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     const handleGoogleCallback = async () => {
       try {
         console.log("=== GOOGLE CALLBACK STARTED ===");
-        console.log("Full URL:", window.location.href);
-        console.log("Hash:", location.hash);
 
-        // Получаем токены из URL фрагмента (#access_token=...)
-        const hash = location.hash.substring(1); // Убираем #
+        // Получаем токены из URL фрагмента
+        const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
 
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
-        const expires_at = params.get("expires_at");
-        const provider_token = params.get("provider_token");
+        // Извлекаем access_token от Google (не provider_token!)
+        const googleAccessToken = params.get("access_token");
+        const expiresIn = params.get("expires_in");
+        const tokenType = params.get("token_type");
 
-        console.log("Tokens extracted:", {
-          access_token: access_token ? "PRESENT" : "MISSING",
-          refresh_token: refresh_token ? "PRESENT" : "MISSING",
-          expires_at,
-          provider_token: provider_token ? "PRESENT" : "MISSING",
-        });
+        console.log(
+          "Google access token received:",
+          googleAccessToken ? "PRESENT" : "MISSING"
+        );
 
-        if (!access_token || !refresh_token) {
-          throw new Error("No authentication tokens received from Google");
+        if (!googleAccessToken) {
+          throw new Error("No access token received from Google");
         }
 
-        // Отправляем токены на бекенд
-        console.log("Sending tokens to backend...");
+        // НЕ отправляем Google token напрямую в Supabase
+        // Вместо этого используем Google token для получения информации о пользователе
+        console.log("Fetching user info from Google...");
+
+        // Получаем информацию о пользователе от Google
+        const userInfoResponse = await fetch(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${googleAccessToken}`,
+            },
+          }
+        );
+
+        if (!userInfoResponse.ok) {
+          throw new Error("Failed to fetch user info from Google");
+        }
+
+        const userInfo = await userInfoResponse.json();
+        console.log("Google user info:", userInfo);
+
+        // Теперь отправляем данные на ваш бэкенд
         const response = await fetch(`${API}/auth/google/callback`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "include", // Важно для получения куки
+          credentials: "include",
           body: JSON.stringify({
-            access_token,
-            refresh_token,
-            expires_at,
-            provider_token,
+            googleAccessToken,
+            userInfo, // Отправляем информацию о пользователе
           }),
         });
 
-        console.log("Backend response status:", response.status);
-
         if (!response.ok) {
           const errorData = await response.json();
-          console.error("Backend error response:", errorData);
           throw new Error(
             errorData.error || `HTTP error! status: ${response.status}`
           );
         }
 
         const data = await response.json();
-        console.log("Google authentication successful:", data);
+        console.log("Authentication successful:", data);
 
-        // Очищаем URL от токенов (по соображениям безопасности)
+        // Очищаем URL
         window.history.replaceState({}, document.title, "/auth/callback");
 
-        // Редирект на главную с небольшой задержкой
+        // Редирект на главную
         setTimeout(() => {
           navigate("/");
         }, 500);
@@ -77,9 +87,8 @@ export default function GoogleCallbackPage() {
         console.error("Google callback error:", err);
         setError(err instanceof Error ? err.message : "Authentication failed");
 
-        // Редирект на страницу логина с ошибкой
         setTimeout(() => {
-          navigate("/login", {
+          navigate("/auth", {
             state: {
               error: "Google authentication failed",
               details: err instanceof Error ? err.message : "Unknown error",
@@ -92,7 +101,7 @@ export default function GoogleCallbackPage() {
     };
 
     handleGoogleCallback();
-  }, [location, navigate]);
+  }, [navigate]);
 
   if (loading) {
     return (

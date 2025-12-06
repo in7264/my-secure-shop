@@ -35,7 +35,7 @@ function MainApp() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/login" element={<AuthPage />} />
           <Route path="/auth/callback" element={<GoogleCallbackPage />} />
           <Route path="/equipment" element={<CategoriesPage />} />
           <Route
@@ -77,7 +77,7 @@ function MainApp() {
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAppState();
 
-  if (user?.role === "supabase_admin") {
+  if (user?.role === "service_role" || user?.role === "supabase_admin") {
     return <>{children}</>;
   }
 

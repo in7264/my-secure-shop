@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { CartItem, Favorite } from '../types';

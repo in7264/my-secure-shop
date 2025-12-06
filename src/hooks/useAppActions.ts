@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { useAppDispatch, useAppState } from "../contexts/AppContext";
-import type { Equipment } from "../types";
+import type { Equipment, Favorite } from "../types";
 
 export function useAppActions() {
   const dispatch = useAppDispatch();
-  const { user } = useAppState();
+  const { user, cartItems, favorites } = useAppState(); // Додаємо всі стани на верхньому рівні
 
   /**
    * Проверяет аутентификацию пользователя через API
@@ -81,7 +81,6 @@ export function useAppActions() {
   const addToCart = useCallback(
     async (equipment: Equipment, quantity: number = 1) => {
       const API = import.meta.env.VITE_API as string;
-      const { user, cartItems } = useAppState();
 
       if (!user) {
         // Локальное обновление
@@ -101,7 +100,18 @@ export function useAppActions() {
           },
         };
 
-        dispatch({ type: "ADD_TO_CART", payload: cartItem });
+        if (existingItem) {
+          dispatch({
+            type: "UPDATE_CART_QUANTITY",
+            payload: {
+              equipmentId: equipment.id,
+              quantity: existingItem.quantity + quantity,
+            },
+          });
+        } else {
+          dispatch({ type: "ADD_TO_CART", payload: cartItem });
+        }
+
         alert("Товар додано до кошика!");
         return;
       }
@@ -118,20 +128,19 @@ export function useAppActions() {
         });
 
         if (res.ok) {
-          loadCartFromServer();
+          await loadCartFromServer();
           alert("Товар додано до кошика!");
         }
       } catch (error) {
         console.error("Error adding to cart:", error);
       }
     },
-    [dispatch, loadCartFromServer]
+    [user, cartItems, dispatch, loadCartFromServer]
   );
 
   const removeFromCart = useCallback(
     async (equipmentId: number) => {
       const API = import.meta.env.VITE_API as string;
-      const { user } = useAppState();
 
       if (!user) {
         dispatch({ type: "REMOVE_FROM_CART", payload: equipmentId });
@@ -143,18 +152,17 @@ export function useAppActions() {
           method: "DELETE",
           credentials: "include",
         });
-        loadCartFromServer();
+        await loadCartFromServer();
       } catch (error) {
         console.error("Error removing from cart:", error);
       }
     },
-    [dispatch, loadCartFromServer]
+    [user, dispatch, loadCartFromServer]
   );
 
   const updateCartQuantity = useCallback(
     async (equipmentId: number, quantity: number) => {
       const API = import.meta.env.VITE_API as string;
-      const { user } = useAppState();
 
       if (!user) {
         dispatch({
@@ -173,36 +181,51 @@ export function useAppActions() {
           body: JSON.stringify({ quantity }),
           credentials: "include",
         });
-        loadCartFromServer();
+        await loadCartFromServer();
       } catch (error) {
         console.error("Error updating cart:", error);
       }
     },
-    [dispatch, loadCartFromServer]
+    [user, dispatch, loadCartFromServer]
   );
 
   const toggleFavorite = useCallback(
     async (equipment: Equipment) => {
       const API = import.meta.env.VITE_API as string;
-      const { user, favorites } = useAppState();
 
-      const favoriteItem = {
+      const favoriteItem: Favorite = {
         id: Date.now(),
         equipment: {
           id: equipment.id,
           name: equipment.name,
+          description: equipment.description,
           price: equipment.price,
+          stock: equipment.stock,
           main_image: equipment.main_image,
           category: equipment.category,
         },
       };
 
       if (!user) {
-        dispatch({ type: "TOGGLE_FAVORITE", payload: favoriteItem });
         const isFavorite = favorites.some(
           (fav) => fav.equipment.id === equipment.id
         );
-        alert(isFavorite ? "Видалено з обраного!" : "Додано в обране!");
+
+        if (isFavorite) {
+          dispatch({
+            type: "SET_FAVORITES",
+            payload: favorites.filter(
+              (fav) => fav.equipment.id !== equipment.id
+            ),
+          });
+          alert("Видалено з обраного!");
+        } else {
+          dispatch({
+            type: "SET_FAVORITES",
+            payload: [...favorites, favoriteItem],
+          });
+          alert("Додано в обране!");
+        }
         return;
       }
 
@@ -213,14 +236,14 @@ export function useAppActions() {
         });
 
         if (res.ok) {
-          loadFavoritesFromServer();
+          await loadFavoritesFromServer();
           alert("Стан обраного оновлено!");
         }
       } catch (error) {
         console.error("Error toggling favorite:", error);
       }
     },
-    [dispatch, loadFavoritesFromServer]
+    [user, favorites, dispatch, loadFavoritesFromServer]
   );
 
   const logout = useCallback(async () => {

@@ -1,151 +1,241 @@
 import { useState } from "react";
+import "./AuthPage.scss";
+import { useAuthLogic } from "./useAuthLogic";
 
 export default function AuthPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "register" | "reset">("login");
+  const [showPassword, setShowPassword] = useState(false);
 
-  const API = import.meta.env.VITE_API as string;
+  const {
+    // Стан
+    email,
+    password,
+    mode,
+    loading,
+    error,
 
-  // === Email login ===
-  const handleEmailLogin = async () => {
-    try {
-      console.log("API:", API);
+    // Сетери
+    setEmail,
+    setPassword,
 
-      const res = await fetch(`${API}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+    // Обробники
+    handleEmailLogin,
+    handleEmailRegister,
+    handlePasswordReset,
+    handleGoogleLogin,
+    switchToLogin,
+    switchToRegister,
+    switchToReset,
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
-      }
+    // Утиліти
+    isValidEmail,
+    isValidPassword,
+    canSubmit,
+    getSubmitButtonText,
+    getTitle,
 
-      const data = await res.json();
-      console.log("Login success:", data);
+    // Флаги
+    isLoginMode,
+    isRegisterMode,
+    isResetMode,
+  } = useAuthLogic();
 
-      alert("Успішний вхід!");
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Login error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      alert("Помилка входу: " + errorMessage);
+  // Обробка відправки форми
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!canSubmit()) return;
+
+    if (isLoginMode) {
+      handleEmailLogin();
+    } else if (isRegisterMode) {
+      handleEmailRegister();
+    } else if (isResetMode) {
+      handlePasswordReset();
     }
   };
 
-  // === Email registration ===
-  const handleEmailRegister = async () => {
-    const res = await fetch(`${API}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) return alert("Помилка реєстрації: " + data.error);
-
-    alert("Перевірте пошту для підтвердження акаунта.");
+  // Обробник для Google кнопки
+  const handleGoogleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleGoogleLogin();
   };
 
-  // === Reset password ===
-  const handlePasswordReset = async () => {
-    const res = await fetch(`${API}/auth/reset`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) return alert("Помилка: " + data.error);
-
-    alert("Лист для відновлення паролю відправлено!");
+  // Перемикання видимості паролю
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
-  // === Google Login ===
-  const handleGoogleLogin = async () => {
-    window.location.href = `${API}/auth/google`;
+  // Перевірка валідності поля email
+  const getEmailInputClass = () => {
+    if (email === "") return "";
+    return isValidEmail(email) ? "valid" : "error";
+  };
+
+  // Перевірка валідності поля паролю
+  const getPasswordInputClass = () => {
+    if (password === "") return "";
+    return isValidPassword(password) ? "valid" : "error";
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: "80px auto", textAlign: "center" }}>
-      <h2>
-        {mode === "login"
-          ? "Вхід"
-          : mode === "register"
-          ? "Реєстрація"
-          : "Відновлення паролю"}
-      </h2>
+    <div className="auth-page">
+      <div className="auth-page__header">
+        <h2>{getTitle()}</h2>
+        <p>Будь ласка, введіть свої дані для продовження</p>
+      </div>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        style={{ display: "block", margin: "10px auto", width: "100%" }}
-      />
+      {error && <div className="auth-page__error">{error}</div>}
 
-      {mode !== "reset" && (
-        <input
-          type="password"
-          placeholder="Пароль"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ display: "block", margin: "10px auto", width: "100%" }}
-        />
-      )}
+      <form className="auth-page__form" onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="email">Електронна пошта</label>
+          <input
+            id="email"
+            type="email"
+            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={`auth-page__input ${getEmailInputClass()}`}
+            required
+            disabled={loading}
+          />
+        </div>
 
-      {mode === "login" && (
-        <>
-          <button onClick={handleEmailLogin}>Увійти</button>
-          <p>
-            Немає акаунта?{" "}
-            <a href="#" onClick={() => setMode("register")}>
-              Зареєструватися
-            </a>
-          </p>
-          <p>
-            Забули пароль?{" "}
-            <a href="#" onClick={() => setMode("reset")}>
-              Відновити
-            </a>
-          </p>
-        </>
-      )}
+        {(isLoginMode || isRegisterMode) && (
+          <div className="form-group">
+            <label htmlFor="password">Пароль</label>
+            <div className="auth-page__password-toggle">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Введіть пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`auth-page__input ${getPasswordInputClass()}`}
+                required
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="toggle-button"
+                onClick={togglePasswordVisibility}
+                disabled={loading}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
 
-      {mode === "register" && (
-        <>
-          <button onClick={handleEmailRegister}>Зареєструватися</button>
+            {isRegisterMode && (
+              <div className="auth-page__password-requirements">
+                <h4>Вимоги до паролю:</h4>
+                <ul>
+                  <li className={password.length >= 6 ? "valid" : "invalid"}>
+                    Мінімум 6 символів
+                  </li>
+                  <li className={/\d/.test(password) ? "valid" : "invalid"}>
+                    Містить цифри
+                  </li>
+                  <li className={/[A-Z]/.test(password) ? "valid" : "invalid"}>
+                    Містить великі літери
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className={`auth-page__submit-button ${
+            isRegisterMode ? "auth-page__submit-button--secondary" : ""
+          }`}
+          disabled={!canSubmit() || loading}
+        >
+          {getSubmitButtonText()}
+        </button>
+      </form>
+
+      <div className="auth-page__divider">
+        <span>або</span>
+      </div>
+
+      <div className="auth-page__oauth-buttons">
+        <button
+          onClick={handleGoogleClick}
+          className="auth-page__google-button"
+          disabled={loading}
+        >
+          <span className="google-icon">G</span>
+          Увійти через Google
+        </button>
+      </div>
+
+      <div className="auth-page__links">
+        {isLoginMode ? (
+          <>
+            <p>
+              Немає акаунта?{" "}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!loading) switchToRegister();
+                }}
+                className="auth-link"
+              >
+                Зареєструватися
+              </a>
+            </p>
+            <p>
+              Забули пароль?{" "}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!loading) switchToReset();
+                }}
+                className="auth-link"
+              >
+                Відновити
+              </a>
+            </p>
+          </>
+        ) : isRegisterMode ? (
           <p>
             Уже маєте акаунт?{" "}
-            <a href="#" onClick={() => setMode("login")}>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (!loading) switchToLogin();
+              }}
+              className="auth-link"
+            >
               Увійти
             </a>
           </p>
-        </>
-      )}
-
-      {mode === "reset" && (
-        <>
-          <button onClick={handlePasswordReset}>Відновити пароль</button>
+        ) : (
           <p>
-            <a href="#" onClick={() => setMode("login")}>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (!loading) switchToLogin();
+              }}
+              className="auth-link"
+            >
               Назад до входу
             </a>
           </p>
-        </>
-      )}
+        )}
+      </div>
 
-      <hr style={{ margin: "20px 0" }} />
-      <button onClick={handleGoogleLogin}>Увійти через Google</button>
+      {/* Додаткові повідомлення */}
+      {mode === "reset" && email && isValidEmail(email) && (
+        <div className="auth-page__success-message">
+          На цю пошту буде відправлено лист з інструкціями
+        </div>
+      )}
     </div>
   );
 }

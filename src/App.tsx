@@ -35,7 +35,7 @@ function MainApp() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<AuthPage />} />
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/auth/callback" element={<GoogleCallbackPage />} />
           <Route path="/equipment" element={<CategoriesPage />} />
           <Route

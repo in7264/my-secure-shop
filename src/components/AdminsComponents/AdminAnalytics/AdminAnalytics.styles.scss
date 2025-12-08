@@ -1,0 +1,27 @@
+// src/pages/AdminPage/components/AdminAnalytics/AdminAnalytics.styles.scss
+.admin-analytics {
+  display: grid;
+  gap: 20px;
+
+  &--empty {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+  }
+
+  &__chart-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &__chart-title {
+    margin-bottom: 16px;
+    color: #333;
+  }
+
+  &__chart-wrapper {
+    height: 300px;
+  }
+}

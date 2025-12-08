@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppActions } from "../../hooks/useAppActions";
 
 const API = import.meta.env.VITE_API as string;
 
@@ -7,6 +8,7 @@ export default function GoogleCallbackPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { checkAuth } = useAppActions(); // Добавьте эту строку
 
   useEffect(() => {
     const handleGoogleCallback = async () => {
@@ -73,6 +75,9 @@ export default function GoogleCallbackPage() {
         const data = await response.json();
         console.log("Authentication successful:", data);
 
+        // ВАЖНО: Обновляем состояние авторизации
+        await checkAuth(); // Добавьте эту строку
+
         // Очищаем URL
         window.history.replaceState({}, document.title, "/auth/callback");
 
@@ -98,7 +103,7 @@ export default function GoogleCallbackPage() {
     };
 
     handleGoogleCallback();
-  }, [navigate]);
+  }, [navigate, checkAuth]); // Добавьте checkAuth в зависимости
 
   if (loading) {
     return (

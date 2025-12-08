@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useAppState } from "../contexts/AppContext";
-import { useAppActions } from "./useAppActions";
+import { useAppState } from "../../contexts/AppContext";
 export function useCartLogic() {
   const { cartItems } = useAppState();
   const { updateCartQuantity, removeFromCart } = useAppActions();
@@ -62,4 +61,7 @@ export function useCartLogic() {
     // Утиліти
     isCartEmpty: cartItems.length === 0,
   };
+}
+function useAppActions(): { updateCartQuantity: any; removeFromCart: any } {
+  throw new Error("Function not implemented.");
 }

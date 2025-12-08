@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "./CategoriesPage.scss";
-import { useCategoriesLogic } from "../../hooks/useCategoriesLogic";
+import { useCategoriesLogic } from "./useCategoriesLogic";
 
 export default function CategoriesPage() {
   const {

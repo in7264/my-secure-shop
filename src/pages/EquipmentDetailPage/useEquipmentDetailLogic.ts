@@ -1,15 +1,15 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAppState } from "../contexts/AppContext";
-import { useAppActions } from "./useAppActions";
-import type { Equipment } from "../types";
+import { useAppState } from "../../contexts/AppContext";
+import { useAppActions } from "../../hooks/useAppActions";
+import type { Equipment } from "../../types";
 
 export function useEquipmentDetailLogic() {
   // Получаем состояние и действия из контекста
   const { cartItems, favorites, user } = useAppState();
-  const { addToCart, removeFromCart, updateCartQuantity, toggleFavorite } = useAppActions();
-  
+  const { addToCart, removeFromCart, updateCartQuantity, toggleFavorite } =
+    useAppActions();
+
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,16 +41,19 @@ export function useEquipmentDetailLogic() {
     : null;
 
   /**Функція яка збирає статистику про користувача та який предмет він оглядає*/
-  const trackView = useCallback(async (equipmentId: number) => {
-    try {
-      await fetch(`${API}/equipment/${equipmentId}/view`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Error tracking view:", error);
-    }
-  }, [API]);
+  const trackView = useCallback(
+    async (equipmentId: number) => {
+      try {
+        await fetch(`${API}/equipment/${equipmentId}/view`, {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch (error) {
+        console.error("Error tracking view:", error);
+      }
+    },
+    [API]
+  );
 
   // Загрузка оборудования
   const loadEquipment = useCallback(async () => {
@@ -135,17 +138,20 @@ export function useEquipmentDetailLogic() {
   }, [equipment, removeFromCart]);
 
   // Функция для обновления количества в корзине
-  const updateCartQuantityHandler = useCallback(async (newQuantity: number) => {
-    if (!equipment || newQuantity < 1) return;
+  const updateCartQuantityHandler = useCallback(
+    async (newQuantity: number) => {
+      if (!equipment || newQuantity < 1) return;
 
-    try {
-      await updateCartQuantity(equipment.id, newQuantity);
-      setCartQuantity(newQuantity);
-    } catch (error) {
-      console.error("Error updating cart quantity:", error);
-      alert("Помилка при оновленні кількості");
-    }
-  }, [equipment, updateCartQuantity]);
+      try {
+        await updateCartQuantity(equipment.id, newQuantity);
+        setCartQuantity(newQuantity);
+      } catch (error) {
+        console.error("Error updating cart quantity:", error);
+        alert("Помилка при оновленні кількості");
+      }
+    },
+    [equipment, updateCartQuantity]
+  );
 
   // Функция для работы с избранным
   const toggleFavoriteHandler = useCallback(async () => {
@@ -161,7 +167,7 @@ export function useEquipmentDetailLogic() {
       }
 
       await toggleFavorite(equipment);
-      
+
       // Сообщение пользователю
       if (isInFavorites) {
         alert("Видалено з обраного");
@@ -181,17 +187,17 @@ export function useEquipmentDetailLogic() {
     if (isInCart) {
       updateCartQuantityHandler(cartQuantity - 1);
     } else {
-      setCartQuantity(prev => Math.max(1, prev - 1));
+      setCartQuantity((prev) => Math.max(1, prev - 1));
     }
   }, [isInCart, cartQuantity, updateCartQuantityHandler]);
 
   const increaseQuantity = useCallback(() => {
     if (!equipment) return;
-    
+
     if (isInCart) {
       updateCartQuantityHandler(cartQuantity + 1);
     } else {
-      setCartQuantity(prev => Math.min(equipment.stock, prev + 1));
+      setCartQuantity((prev) => Math.min(equipment.stock, prev + 1));
     }
   }, [isInCart, cartQuantity, equipment, updateCartQuantityHandler]);
 
@@ -204,12 +210,12 @@ export function useEquipmentDetailLogic() {
     cartQuantity,
     addingToCart,
     addingToFavorites,
-    
+
     // Логика
     isInCart,
     isInFavorites,
     currentCartItem,
-    
+
     // Обработчики
     setActiveImage,
     addToCartHandler,
@@ -217,8 +223,8 @@ export function useEquipmentDetailLogic() {
     toggleFavoriteHandler,
     decreaseQuantity,
     increaseQuantity,
-    
+
     // Навигация
-    navigate
+    navigate,
   };
 }

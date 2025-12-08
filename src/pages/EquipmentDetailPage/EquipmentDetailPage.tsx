@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import "./EquipmentDetailPage.scss";
-import { useEquipmentDetailLogic } from "../../hooks/useEquipmentDetailLogic";
+import { useEquipmentDetailLogic } from "./useEquipmentDetailLogic";
 import ImageModal from "../../components/ImageModal";
 
 export default function EquipmentDetailPage() {

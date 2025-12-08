@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "./EquipmentListPage.scss";
-import { useEquipmentListLogic } from "../../hooks/useEquipmentListLogic";
+import { useEquipmentListLogic } from "./useEquipmentListLogic";
 
 export default function EquipmentListPage() {
   const {

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "./CartPage.scss";
-import { useCartLogic } from "../../hooks/useCartLogic";
+import { useCartLogic } from "./useCartLogic";
 
 export default function CartPage() {
   const {

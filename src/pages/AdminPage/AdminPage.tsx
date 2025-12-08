@@ -1,71 +1,55 @@
-import { useState } from "react";
-import type { AnalyticsData, Equipment } from "../../types";
-import AdminAnalytics from "../../components/AdminsComponents/AdminAnalytics";
-import AdminOverview from "../../components/AdminsComponents/AdminOverview";
-import AdminProducts from "../../components/AdminsComponents/AdminProducts";
+// src/pages/AdminPage/AdminPage.tsx
+import AdminAnalytics from "../../components/AdminsComponents/AdminAnalytics/AdminAnalytics";
+import AdminOverview from "../../components/AdminsComponents/AdminOverview/AdminOverview";
+import AdminProducts from "../../components/AdminsComponents/AdminProducts/AdminProducts";
+import { useAdminPageLogic } from "./AdminPage.logic";
+import "./AdminPage.styles.scss";
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(
-    null
-  );
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
+  const {
+    activeTab,
+    analytics,
+    equipmentList,
+    showAddModal,
+    showEditModal,
+    showDeleteModal,
+    selectedEquipment,
+    handleTabChange,
+    setAnalytics,
+    setEquipmentList,
+    setShowAddModal,
+    setShowEditModal,
+    setShowDeleteModal,
+    setSelectedEquipment,
+  } = useAdminPageLogic();
 
   return (
-    <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
-      <h1>Адмін-панель 📊</h1>
+    <div className="admin-page">
+      <h1 className="admin-page__title">Адмін-панель 📊</h1>
 
       {/* Навигация */}
-      <div style={{ marginBottom: 20, borderBottom: "1px solid #ddd" }}>
+      <div className="admin-page__tabs">
         <button
           onClick={() => handleTabChange("overview")}
-          style={{
-            padding: "10px 20px",
-            marginRight: 10,
-            backgroundColor:
-              activeTab === "overview" ? "#007bff" : "transparent",
-            color: activeTab === "overview" ? "white" : "#007bff",
-            border: "1px solid #007bff",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
+          className={`admin-page__tab ${
+            activeTab === "overview" ? "admin-page__tab--active" : ""
+          }`}
         >
           Огляд
         </button>
         <button
           onClick={() => handleTabChange("products")}
-          style={{
-            padding: "10px 20px",
-            marginRight: 10,
-            backgroundColor:
-              activeTab === "products" ? "#007bff" : "transparent",
-            color: activeTab === "products" ? "white" : "#007bff",
-            border: "1px solid #007bff",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
+          className={`admin-page__tab ${
+            activeTab === "products" ? "admin-page__tab--active" : ""
+          }`}
         >
           Товари
         </button>
         <button
           onClick={() => handleTabChange("analytics")}
-          style={{
-            padding: "10px 20px",
-            backgroundColor:
-              activeTab === "analytics" ? "#007bff" : "transparent",
-            color: activeTab === "analytics" ? "white" : "#007bff",
-            border: "1px solid #007bff",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
+          className={`admin-page__tab ${
+            activeTab === "analytics" ? "admin-page__tab--active" : ""
+          }`}
         >
           Аналітика
         </button>
